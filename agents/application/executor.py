@@ -2,6 +2,7 @@ import os
 import json
 import ast
 import re
+from tabnanny import verbose
 from typing import List, Dict, Any
 
 import math
@@ -9,12 +10,15 @@ import math
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from langchain_ollama import OllamaLLM
+from langchain.agents import agent_types, initialize_agent, AgentType
 
 from agents.polymarket.gamma import GammaMarketClient as Gamma
 from agents.connectors.chroma import PolymarketRAG as Chroma
 from agents.utils.objects import SimpleEvent, SimpleMarket
 from agents.application.prompts import Prompter
 from agents.polymarket.polymarket import Polymarket
+from agents.calculator import calculator
 
 def retain_keys(data, keys_to_retain):
     if isinstance(data, dict):
@@ -29,15 +33,27 @@ def retain_keys(data, keys_to_retain):
         return data
 
 class Executor:
-    def __init__(self, default_model='gpt-3.5-turbo-16k') -> None:
+    def __init__(self, default_model='gpt-3.5-turbo-0125') -> None:
         load_dotenv()
-        max_token_model = {'gpt-3.5-turbo-16k':15000, 'gpt-4-1106-preview':95000}
+        max_token_model = {'gpt-3.5-turbo-0125':15000, 'gpt-4-1106-preview':95000}
         self.token_limit = max_token_model.get(default_model)
         self.prompter = Prompter()
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.llm = ChatOpenAI(
-            model=default_model, #gpt-3.5-turbo"
-            temperature=0,
+        self.tools = [calculator]
+        # self.llm = ChatOpenAI(
+        #     model=default_model, #gpt-3.5-turbo"
+        #     temperature=0,
+        # )
+        self.llm = OllamaLLM(
+            model="llama3.1",
+            temperature = 0.8,
+            num_predict = 512,
+        )
+        self.agent = initialize_agent(
+            tools=self.tools,
+            llm=self.llm,
+            agent_type=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+            verbose=True
         )
         self.gamma = Gamma()
         self.chroma = Chroma()
@@ -48,7 +64,7 @@ class Executor:
         human_message = HumanMessage(content=user_input)
         messages = [system_message, human_message]
         result = self.llm.invoke(messages)
-        return result.content
+        return result
 
     def get_superforecast(
         self, event_title: str, market_question: str, outcome: str
@@ -57,7 +73,7 @@ class Executor:
             description=event_title, question=market_question, outcome=outcome
         )
         result = self.llm.invoke(messages)
-        return result.content
+        return result
 
 
     def estimate_tokens(self, text: str) -> int:
@@ -71,7 +87,7 @@ class Executor:
         human_message = HumanMessage(content=user_input)
         messages = [system_message, human_message]
         result = self.llm.invoke(messages)
-        return result.content
+        return result
 
 
     def divide_list(self, original_list, i):
@@ -125,7 +141,7 @@ class Executor:
     def filter_events(self, events: "list[SimpleEvent]") -> str:
         prompt = self.prompter.filter_events(events)
         result = self.llm.invoke(prompt)
-        return result.content
+        return result
 
     def filter_events_with_rag(self, events: "list[SimpleEvent]") -> str:
         prompt = self.prompter.filter_events()
@@ -155,7 +171,9 @@ class Executor:
         return self.chroma.markets(markets, prompt)
 
     def source_best_trade(self, market_object) -> str:
+
         market_document = market_object[0].dict()
+
         market = market_document["metadata"]
         outcome_prices = ast.literal_eval(market["outcome_prices"])
         outcomes = ast.literal_eval(market["outcomes"])
@@ -167,7 +185,7 @@ class Executor:
         print("... prompting ... ", prompt)
         print()
         result = self.llm.invoke(prompt)
-        content = result.content
+        content = result
 
         print("result: ", content)
         print()
@@ -175,16 +193,21 @@ class Executor:
         print("... prompting ... ", prompt)
         print()
         result = self.llm.invoke(prompt)
-        content = result.content
+        content = content + result
 
-        print("result: ", content)
+        print("result: ", result)
         print()
         return content
 
     def format_trade_prompt_for_execution(self, best_trade: str) -> float:
-        data = best_trade.split(",")
+        # data = best_trade.split(",")
         # price = re.findall("\d+\.\d+", data[0])[0]
-        size = re.findall("\d+\.\d+", data[1])[0]
+        match = re.search(r"size:\s?([\d\.]+)", best_trade)
+        # size = re.findall(r"size: \d+\.\d+", best_trade)[0]
+        if match:
+            size = float(match.group(1))
+        else: 
+            raise ValueError("No decimal number found in the input string")
         usdc_balance = self.polymarket.get_usdc_balance()
         return float(size) * usdc_balance
 
@@ -194,5 +217,5 @@ class Executor:
         print("... prompting ... ", prompt)
         print()
         result = self.llm.invoke(prompt)
-        content = result.content
+        content = result
         return content

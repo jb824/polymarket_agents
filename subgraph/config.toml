@@ -1,0 +1,7 @@
+[graphql]
+schema = "schema.graphql"
+output = "models.py"
+
+[codegen]
+resolvers = true
+annotations = true

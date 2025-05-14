@@ -94,7 +94,7 @@ class Prompter:
             self.polymarket_analyst_api()
             + f"""
         
-        Filter these events for the ones you will be best at trading on profitably.
+        Filter these events for the ones you will be best at trading on profitably: 
 
         """
         )
@@ -242,4 +242,42 @@ class Prompter:
         Question: "Will Kamala win"
         Outcomes: Yes or No
         
+        """
+
+    def follow_whales(self, address: str) -> str:
+        return f""" 
+
+        Provide the bot with historical stock price data from the past 5 years, including daily closing prices, 
+        trading volume, and open interest. Ensure that the data includes information on the Whale Wallet's known 
+        trades, such as:
+
+        * Stocks purchased or sold
+        * Trade dates and times
+        * Trade amounts
+        * Profit/loss margins
+
+        **Bot Requirements:**
+
+        1. Use a combination of technical analysis indicators (e.g., moving averages, RSI, Bollinger Bands) to identify potential trading opportunities.
+        2. Implement machine learning algorithms to analyze market trends and predict future price movements.
+        3. Utilize sentiment analysis tools to gauge market sentiment and adjust trades accordingly.
+        4. Employ risk management techniques to minimize losses and maximize gains.
+        5. Make trades based on the Whale Wallet's historical patterns, such as buying when the stock is undervalued and selling when it reaches a predetermined profit target.
+
+        **Evaluation Criteria:**
+
+        1. Accuracy of predicted trades (90% or higher)
+        2. Profitability of trades (average return on investment > 20%)
+        3. Risk management performance (maximum drawdown < 30%)
+        4. Adherence to Whale Wallet's trading strategies and patterns
+
+        **Goals:**
+
+        * Achieve a minimum profit of $100,000 within the first 6 months
+        * Maintain a maximum drawdown of 20% over the course of the simulation
+        * Demonstrate an accuracy rate of 95% or higher in predicting trades"
+
+        This prompt provides a clear set of goals and requirements for the AI trading bot to follow, while also allowing it to learn from historical data and adapt to changing market conditions.
+
+
         """

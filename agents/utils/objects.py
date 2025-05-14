@@ -1,6 +1,7 @@
 from __future__ import annotations
-from typing import Optional, Union
-from pydantic import BaseModel
+from typing import Optional, Union, Literal
+from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
 
 
 class Trade(BaseModel):
@@ -42,6 +43,8 @@ class SimpleMarket(BaseModel):
     outcomes: str
     outcome_prices: str
     clob_token_ids: Optional[str]
+    condition_id: str
+    question_id: str
 
 
 class ClobReward(BaseModel):
@@ -226,3 +229,187 @@ class Article(BaseModel):
     urlToImage: Optional[str]
     publishedAt: Optional[str]
     content: Optional[str]
+
+class Vote(BaseModel):
+    id: Optional[str]
+    requester: Optional[str]
+    identifier: Optional[str]
+    timestamp: Optional[int]
+
+
+class ValueUser(BaseModel):
+    """
+    https://data-api.polymarket.com/value?user={proxy wallet address}
+
+    attributes:
+        user (str): user proxy address
+        value (float): current amount from proxy address 
+    
+    """
+    user: str
+    value: float
+
+class TradedUser(BaseModel, frozen=True):
+    """ 
+    https://data-api.polymarket.com/traded?user={proxy wallet address}
+
+    attributes:
+        user (str): user proxy address
+        traded (int): total markets traded
+    """
+    user: str
+    traded: int 
+
+class ActivityUser(BaseModel, frozen=True):
+    """
+    https://data-api.polymarket.com/activity?user={proxy wallet address}&limit=100&offset=0
+
+    attributes: 
+        proxyWallet (str): user proxy address
+        timestamp (int): unix format 
+        conditionId (str): condition that the token is linked to
+        type (str): specify transaction type (e.g., 'TRADE', 'REDEEM')
+        size (float): number of shares
+        usdcSize (float):
+        transactionHash (str): 
+        price (float):
+        asset (str): token id associated with transaction
+        side (str):
+        outcomeIndex (int):
+        title (str): event name
+        slug (str): event slug
+        icon (str): url to event image
+        eventSlug (str): event slug
+        outcome (str): returns readable "Yes" or "No"
+        name (str): account username
+        pseudonym (str): pseudonym name associated with account 
+        bio (str): 
+        profileImage (str): url of account profile picture
+        profileImageOptimized (str):
+    """
+    proxyWallet: str 
+    timestamp: int
+    conditionId: str
+    type: str
+    size: float
+    usdcSize: float
+    transactionHash: str
+    price: float
+    asset: str
+    side: str
+    outcomeIndex: int
+    title: str
+    slug: str
+    icon: str
+    eventSlug: str
+    outcome: str
+    name: str
+    pseudonym: str
+    bio: str
+    profileImage: str
+    profileImageOptimized: str
+
+    model_config = ConfigDict(extra="ignore")      # for Pydantic v2
+
+
+class UserPosition(BaseModel, frozen=True):
+    """ 
+    user position on market 
+
+    fetch endpoint:
+    https://data-api.polymarket.com/positions?sizeThreshold=.1&user={proxy wallet address} 
+
+    attributes:
+    
+    """
+    proxyWallet: str
+    asset: str
+    conditionId: str
+    size: float
+    avgPrice: float
+    initialValue: float
+    currentValue: float
+    cashPnl: float
+    percentPnl: float
+    totalBought: float
+    realizedPnl: float
+    percentRealizedPnl: float
+    curPrice: float
+    redeemable: bool
+    mergeable: bool
+    title: str
+    slug: str
+    icon: str
+    eventSlug: str
+    outcome: str
+    outcomeIndex: int
+    oppositeOutcome: str
+    oppositeAsset: str
+    endDate: str
+    negativeRisk: bool
+
+class Trader(BaseModel, frozen=False):
+    proxyWallet: str
+    amount: float
+    pseudonym: str
+    name: str
+    bio: str
+    profileImage: str
+    profileImageOptimized: str
+
+class ActiveTrader(Trader, frozen=False):
+    current_value: float
+    trades: int
+
+# class Event(BaseModel):
+#     id: str = Field(..., description="Event ID")
+#     ticker: str = Field(..., description="Ticker symbol")
+#     slug: str = Field(..., description="Slug for the event")
+#     title: str = Field(..., description="Title of the event")
+#     description: str = Field(..., description="Description of the event")
+
+#     resolutionSource: Optional[str] = Field(None, description="Source of the event resolution")
+#     startDate: datetime = Field(..., description="Start date of the event")
+#     creationDate: datetime = Field(..., description="Creation date of the event")
+#     endDate: datetime = Field(..., description="End date of the event")
+
+#     image: Optional[str] = Field(None, description="URL for the event image")
+#     icon: Optional[str] = Field(None, description="URL for the event icon")
+#     active: bool = Field(True, description="Indicates whether the event is active")
+#     closed: bool = Field(False, description="Indicates whether the event is closed")
+#     archived: bool = Field(False, description="Indicates whether the event is archived")
+#     new: bool = Field(False, description="Indicates whether the event is new")
+#     featured: bool = Field(True, description="Indicates whether the event is featured")
+#     restricted: bool = Field(True, description="Indicates whether the event is restricted")
+#     liquidity: float = Field(..., description="Liquidity of the event", ge=0)
+#     volume: float = Field(..., description="Volume of the event", ge=0)
+#     openInterest: int = Field(0, description="Open interest in the event")
+#     sortBy: str = Field(..., description="Sorting criteria for the event")
+#     createdAt: datetime = Field(..., description="Creation date of the event")
+#     updatedAt: Optional[datetime] = Field(None, description="Last update date of the event")
+
+#     competitive: float = Field(..., description="Competitive factor for the event", ge=0)
+#     volume24hr: float = Field(..., description="Volume over 24 hours for the event", ge=0)
+#     volume1wk: float = Field(..., description="Volume over one week for the event", ge=0)
+#     volume1mo: float = Field(..., description="Volume over one month for the event", ge=0)
+#     volume1yr: float = Field(..., description="Volume over one year for the event", ge=0)
+#     enableOrderBook: bool = Field(True, description="Indicates whether to enable order book")
+#     liquidityClob: float = Field(..., description="Liquidity CLOB for the event", ge=0)
+#     negRisk: bool = Field(True, description="Neg risk indicator for the event")
+#     negRiskMarketID: Optional[str] = Field(None, description="Neg risk market ID")
+#     commentCount: int = Field(7720, description="Number of comments for the event")
+#     cyom: bool = Field(False, description="CYOM flag")
+#     showAllOutcomes: bool = Field(False, description="Flag to show all outcomes")
+#     showMarketImages: bool = Field(True, description="Flag to show market images")
+#     enableNegRisk: bool = Field(True, description="Enable neg risk indicator for the event")
+#     automaticallyActive: bool = Field(True, description="Automatically active flag for the event")
+#     startTime: Optional[datetime] = Field(None, description="Start time of the event")
+#     gmpChartMode: str = Field(..., description="GMP chart mode", ge="")
+#     negRiskAugmented: bool = Field(True, description="Neg risk augmented indicator for the event")
+#     countryName: str = Field(..., description="Country name for the event")
+#     electionType: str = Field(..., description="Election type for the event", ge="")
+#     color: Optional[str] = Field(None, description="Color code for the event")
+
+#     featuredOrder: int = Field(2, description="Featured order number for the event")
+#     pendingDeployment: bool = Field(False, description="Pending deployment flag for the event")
+#     deploying: bool = Field(False, description="Deploying flag for the event")    

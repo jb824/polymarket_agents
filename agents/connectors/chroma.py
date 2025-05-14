@@ -3,6 +3,7 @@ import os
 import time
 
 from langchain_openai import OpenAIEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_community.document_loaders import JSONLoader
 from langchain_community.vectorstores.chroma import Chroma
 
@@ -17,19 +18,20 @@ class PolymarketRAG:
         self.embedding_function = embedding_function
 
     def load_json_from_local(
-        self, json_file_path=None, vector_db_directory="./local_db"
+        self, json_file_path=None, vector_db_directory="./local_db_markets"
     ) -> None:
         loader = JSONLoader(
             file_path=json_file_path, jq_schema=".[].description", text_content=False
         )
         loaded_docs = loader.load()
 
-        embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
+        # embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
+        embedding_function = OllamaEmbeddings(model="llama3.2")
         Chroma.from_documents(
             loaded_docs, embedding_function, persist_directory=vector_db_directory
         )
 
-    def create_local_markets_rag(self, local_directory="./local_db") -> None:
+    def create_local_markets_rag(self, local_directory="./local_db_markets") -> None:
         all_markets = self.gamma_client.get_all_current_markets()
 
         if not os.path.isdir(local_directory):
@@ -47,7 +49,8 @@ class PolymarketRAG:
     def query_local_markets_rag(
         self, local_directory=None, query=None
     ) -> "list[tuple]":
-        embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
+        # embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
+        embedding_function = OllamaEmbeddings(model="llama3.2")
         local_db = Chroma(
             persist_directory=local_directory, embedding_function=embedding_function
         )
@@ -66,10 +69,8 @@ class PolymarketRAG:
 
         # create vector db
         def metadata_func(record: dict, metadata: dict) -> dict:
-
-            metadata["id"] = record.get("id")
-            metadata["markets"] = record.get("markets")
-
+            metadata["id"] = record.get("id", None)
+            metadata["markets"] = record.get("markets", None)            
             return metadata
 
         loader = JSONLoader(
@@ -80,10 +81,15 @@ class PolymarketRAG:
             metadata_func=metadata_func,
         )
         loaded_docs = loader.load()
-        embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
+        # embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
+        embedding_function = OllamaEmbeddings(model="llama3.2")
+
         vector_db_directory = f"{local_events_directory}/chroma"
         local_db = Chroma.from_documents(
-            loaded_docs, embedding_function, persist_directory=vector_db_directory
+            loaded_docs, 
+            embedding_function, 
+            # persist_directory="chroma_db"
+            persist_directory=vector_db_directory
         )
 
         # query
@@ -117,10 +123,14 @@ class PolymarketRAG:
             metadata_func=metadata_func,
         )
         loaded_docs = loader.load()
-        embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
+        # embedding_function = OpenAIEmbeddings(model="text-embedding-3-small")
+        embedding_function = OllamaEmbeddings(model="llama3.2")
         vector_db_directory = f"{local_events_directory}/chroma"
         local_db = Chroma.from_documents(
-            loaded_docs, embedding_function, persist_directory=vector_db_directory
+            loaded_docs, 
+            embedding_function, 
+            persist_directory=vector_db_directory
+            # persist_directory="chroma_db"
         )
 
         # query
